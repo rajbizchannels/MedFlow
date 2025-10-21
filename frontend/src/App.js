@@ -164,6 +164,17 @@ const api = {
     return response.json();
   },
 
+  // Authentication
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (!response.ok) throw new Error('Invalid credentials');
+    return response.json();
+  },
+
   // Users
   getUser: async (id) => {
     const response = await fetch(`${API_BASE_URL}/users/${id}`);
@@ -261,7 +272,117 @@ const formatDateTime = (dateTimeString) => {
   }
 };
 
+// Login Component
+const LoginPage = ({ onLogin, theme }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await api.login(email, password);
+      onLogin(response.user);
+    } catch (err) {
+      setError('Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={`min-h-screen flex items-center justify-center p-4 ${theme === 'dark' ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' : 'bg-gradient-to-br from-gray-100 via-white to-gray-100'}`}>
+      <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-300'}`}>
+        {/* Header */}
+        <div className="p-8 text-center border-b ${theme === 'dark' ? 'border-slate-700' : 'border-gray-300'}">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center">
+              <Stethoscope className="w-10 h-10 text-white" />
+            </div>
+          </div>
+          <h1 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>MedFlow</h1>
+          <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>Healthcare Management Platform</p>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {error && (
+            <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'}`}
+              placeholder="doctor@medflow.com"
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${theme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'}`}
+              placeholder="Enter your password"
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded-lg font-medium transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-5 h-5" />
+                <span>Sign In</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Footer */}
+        <div className={`p-6 text-center text-sm border-t ${theme === 'dark' ? 'border-slate-700 text-slate-400' : 'border-gray-300 text-gray-600'}`}>
+          <p className="mb-4">Demo Credentials:</p>
+          <div className="space-y-2">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${theme === 'dark' ? 'bg-slate-800' : 'bg-gray-100'}`}>
+              <span className="font-semibold">Admin:</span>
+              <code>sarah.chen@medflow.com</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MedFlowApp = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentModule, setCurrentModule] = useState('dashboard');
   const [currentView, setCurrentView] = useState('list');
   const [language, setLanguage] = useState('en');
@@ -271,6 +392,7 @@ const MedFlowApp = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showForm, setShowForm] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1348,11 +1470,13 @@ const MedFlowApp = () => {
           setAppointments(prev => prev.map(apt =>
             apt.id === editData.id ? updated : apt
           ));
+          await addNotification('alert', 'Appointment updated successfully');
         } else if (type === 'patient') {
           const updated = await api.updatePatient(editData.id, editData);
           setPatients(prev => prev.map(patient =>
             patient.id === editData.id ? {...updated, name: updated.name || `${updated.first_name} ${updated.last_name}`} : patient
           ));
+          await addNotification('alert', 'Patient updated successfully');
         } else if (type === 'userProfile') {
           // Update user profile
           const updated = await api.updateUser(editData.id, editData);
@@ -1370,8 +1494,8 @@ const MedFlowApp = () => {
           setClaims(prev => prev.map(claim =>
             claim.id === editData.id ? updated : claim
           ));
+          await addNotification('alert', 'Claim updated successfully');
         }
-        await addNotification('alert', `${type === 'appointment' ? 'Appointment' : type === 'patient' ? 'Patient' : type === 'userProfile' ? 'User Profile' : type === 'user' ? 'User' : 'Claim'} updated successfully`);
         setEditingItem(null);
       } catch (err) {
         console.error('Error saving:', err);
@@ -3567,7 +3691,46 @@ const renderDashboard = () => (
       </div>
     );
   };
-  
+
+  // Login handler
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    setLoading(false);
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUser({
+      id: null,
+      name: '',
+      role: '',
+      practice: '',
+      avatar: ''
+    });
+  };
+
+  // Check if user is authenticated
+  useEffect(() => {
+    // Check for stored auth token or session
+    const storedAuth = localStorage.getItem('isAuthenticated');
+    if (storedAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+    setLoading(false);
+  }, []);
+
+  // Save auth state to localStorage
+  useEffect(() => {
+    localStorage.setItem('isAuthenticated', isAuthenticated);
+  }, [isAuthenticated]);
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} theme={theme} />;
+  }
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' : 'bg-gradient-to-br from-gray-100 via-white to-gray-100'}`}>
       {/* Loading Overlay */}
@@ -3680,12 +3843,57 @@ const renderDashboard = () => (
                 {planTier}
               </button>
 
-              <button
-                onClick={() => setCurrentView('profile')}
-                className={`w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-semibold cursor-pointer hover:scale-105 transition-transform ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-              >
-                {user.avatar}
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className={`w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-semibold cursor-pointer hover:scale-105 transition-transform ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                >
+                  {user.avatar}
+                </button>
+
+                {showUserMenu && (
+                  <div className={`absolute right-0 mt-2 w-56 rounded-xl border shadow-xl z-50 ${theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-300'}`}>
+                    <div className={`p-4 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-gray-300'}`}>
+                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{user.name}</p>
+                      <p className={`text-sm capitalize ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>{user.role}</p>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-gray-500'}`}>{user.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setCurrentView('profile');
+                          setShowUserMenu(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-gray-100 text-gray-700'}`}
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        <span>View Profile</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCurrentView('settings');
+                          setShowUserMenu(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-gray-100 text-gray-700'}`}
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Settings</span>
+                      </button>
+                      <div className={`my-2 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-gray-300'}`}></div>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-red-400 hover:bg-red-500/10"
+                      >
+                        <Lock className="w-4 h-4" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
